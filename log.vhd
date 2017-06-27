@@ -26,7 +26,7 @@ architecture rtl of log is
         end loop;
         return result;
     end function;
-        
+
     constant lut : t_lut := map_log2(5, c_val_bits);
 
     function find_msb(inp : unsigned) return integer is
