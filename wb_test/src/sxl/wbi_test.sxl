@@ -1,0 +1,42 @@
+intercons {
+  WbiTest {
+    desc      {Wishbone Interconnect}
+    type      sharedbus
+    masters {
+      Wbm_1 {
+        desc    {WB Intercon Master Port 1}
+        type    rw
+      }
+      Wbm_2 {
+        desc    {WB Intercon Master Port 2}
+        type    rw
+      }
+    }
+    slaves {
+      Wbs_1 {
+        desc    {WB Intercon Slave Port 1}
+        block   Wbs_1
+        type    rw
+        mask    0x000000FF
+        addr    0x00000000
+        size    0x00000100
+      }
+      Wbs_2 {
+        desc    {WB Intercon Slave Port 2}
+        block   Wbs_2
+        type    ro
+        mask    0x0000000F
+        addr    0x00000200
+        size    0x00000010
+      }
+      Wbs_3 {
+        desc    {WB Intercon Slave Port 3}
+        block   Wbs_3
+        type    rw
+        mask    0x000FFFFF
+        addr    0x00100000
+        size    0x00001000
+      }
+    }
+  }
+}

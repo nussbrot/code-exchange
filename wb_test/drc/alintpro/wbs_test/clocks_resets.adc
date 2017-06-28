@@ -1,0 +1,3 @@
+create_clock -period 150.0 -name clk    [get_ports clk]
+
+# create_reset -polarity active-low  -type async -name rst_n          [get_ports rst_n]

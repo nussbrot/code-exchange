@@ -1,0 +1,29 @@
+
+===================================
+ALDEC_PREMIUM_VHDL.2201_b (Warning)
+===================================
+
+../../../src/vhdl/wbs_test.vhd
+(215, 12) Architecture "wbs_test(rtl)". The "c_has_read_notifies" constant is never used. Level: Recommendation 1. 
+
+=================================
+ALDEC_PREMIUM_VHDL.2351 (Warning)
+=================================
+
+../../../src/vhdl/wbs_test.vhd
+(151, 11) Architecture "wbs_test(rtl)". The "s_flag" signal assigned multiple times in the same execution path. Level: Rule. 
+  (153, 11): Another assignment to the same signal.
+(169, 11) Architecture "wbs_test(rtl)". The "s_flag" signal assigned multiple times in the same execution path. Level: Rule. 
+  (171, 11): Another assignment to the same signal.
+(330, 42) Architecture "wbs_test(rtl)". The "s_reg_notify_rw( 22 downto 16 )" signal assigned multiple times in the same execution path. Level: Rule. 
+  (357, 7): Another assignment to the same signal.
+(330, 42) Architecture "wbs_test(rtl)". The "s_reg_notify_rw( 23 )" signal assigned multiple times in the same execution path. Level: Rule. 
+  (356, 7): Another assignment to the same signal.
+(337, 42) Architecture "wbs_test(rtl)". The "s_reg_notify_ro( 22 downto 16 )" signal assigned multiple times in the same execution path. Level: Rule. 
+  (359, 7): Another assignment to the same signal.
+(337, 42) Architecture "wbs_test(rtl)". The "s_reg_notify_ro( 23 )" signal assigned multiple times in the same execution path. Level: Rule. 
+  (358, 7): Another assignment to the same signal.
+(343, 42) Architecture "wbs_test(rtl)". The "s_reg_notify_wo( 22 downto 16 )" signal assigned multiple times in the same execution path. Level: Rule. 
+  (361, 7): Another assignment to the same signal.
+(343, 42) Architecture "wbs_test(rtl)". The "s_reg_notify_wo( 23 )" signal assigned multiple times in the same execution path. Level: Rule. 
+  (360, 7): Another assignment to the same signal.

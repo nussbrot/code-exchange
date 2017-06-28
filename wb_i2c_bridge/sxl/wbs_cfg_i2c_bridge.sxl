@@ -1,0 +1,59 @@
+blocks {
+  WbsCfgI2cBridge {
+    desc      {Wishbone I2C Bridge Configuration}
+    size      0x00000080
+    registers {
+      Config {
+        desc    {I2C configuration register}
+        addr    0x00
+        signals {
+          DevAddr {
+            desc    {I2C device address}
+            pos     6:0
+            mode    rw
+            reset   0x10
+          }
+          ClkDiv {
+            desc    {I2C clock divider: value = f(WB clk) / (4*f(400kHz))}
+            pos     31:16
+            mode    rw
+            reset   0x20
+          }
+        }
+      }
+      Status {
+        desc    {I2C status register}
+        addr    0x04
+        signals {
+          Status {
+            desc    {Wishbone I2C bridge - status register}
+            pos     31:0
+            mode    ro
+            type    flag
+            flags {
+              I2cCarrierIdle {pos 31 desc {Live: I2C carrier is unoccupied/idle (1: idle)}}
+              I2cCoreIdle {pos 30 desc {Live: I2C core idle (1: idle)}}
+              I2cCoreEn {pos 29 desc {Live: I2C core enabled (1: enabled)}}
+              TrxAccType {pos 24 desc {Last access type (0: read; 1: write)}}
+              TrxErrNackRepDevAdr {pos 14 desc {1: NACK error RX repeated device address}}
+              TrxErrNackDatLsb {pos 13 desc {1: NACK error register data least significant Byte}}
+              TrxErrNackDatMsb {pos 12 desc {1: NACK error register data most significant Byte}}
+              TrxErrNackAdrLsb {pos 11 desc {1: NACK error register address least significant Byte}}
+              TrxErrNackAdrMsb {pos 10 desc {1: NACK error register address most significant Byte}}
+              TrxErrNackDevAdr {pos 9 desc {1: NACK error device address}}
+              TrxErrArbRepDevAdr {pos 8 desc {1: Arbitration error RX repeated device address}}
+              TrxErrArbRestart {pos 7 desc {1: Arbitration error RX restart}}
+              TrxErrArbDatLsb {pos 6 desc {1: Arbitration error register data least significant Byte}}
+              TrxErrArbDatMsb {pos 5 desc {1: Arbitration error register data most significant Byte}}
+              TrxErrArbAdrLsb {pos 4 desc {1: Arbitration error register address least significant Byte}}
+              TrxErrArbAdrMsb {pos 3 desc {1: Arbitration error register address most significant Byte}}
+              TrxErrArbDevAdr {pos 2 desc {1: Arbitration error device address}}
+              TrxErrArbStart {pos 1 desc {1: Arbitration error I2C start}}
+              TrxErrAdr {pos 0 desc {1: Arbitration error address alignment / Byte select error}}
+            }
+          }
+        }
+      }
+    }
+  }
+}

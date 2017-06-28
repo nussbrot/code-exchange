@@ -1,0 +1,270 @@
+blocks {
+  WbsTest {
+    desc      {Wishbone Slave Test}
+    size      0x00000100
+    registers {
+      DummyNotify {
+        notify  ro
+        addr    0x0000
+      }
+      Dummy {
+        addr    0x0000
+      }
+      ReadWrite {
+        addr    0x0000
+        signals {
+          RwSlice0 {
+            pos     31:16
+            mode    rw
+          }
+          RwSlice1 {
+            pos     15:8
+            mode    rw
+          }
+          RwBit {
+            pos     3
+            mode    rw
+          }
+        }
+      }
+      ReadOnly {
+        addr    0x0004
+        signals {
+          RoSlice0 {
+            pos     31:16
+            mode    ro
+          }
+          RoSlice1 {
+            pos     15:8
+            mode    ro
+          }
+          RoBit {
+            pos     3
+            mode    ro
+          }
+        }
+      }
+      WriteOnly {
+        addr    0x0008
+        signals {
+          WoSlice0 {
+            pos     31:16
+            mode    wo
+          }
+          WoSlice1 {
+            pos     15:8
+            mode    wo
+          }
+          WoBit {
+            pos     3
+            mode    wo
+          }
+        }
+      }
+      Trigger {
+        addr    0x000C
+        signals {
+          TrSlice0 {
+            pos     31:16
+            mode    t
+          }
+          TrSlice1 {
+            pos     15:8
+            mode    t
+          }
+          TrBit {
+            pos     3
+            mode    t
+          }
+        }
+      }
+      Enum {
+        addr    0x0010
+        signals {
+          EnBit {
+            pos     31
+            mode    rw
+            type    enum
+            reset   1
+            enums {
+              One {
+                value   1
+              }
+              Zero {
+                value   0
+              }
+            }
+          }
+          EnSlice {
+            pos     13:12
+            mode    rw
+            type    enum
+            reset   2
+            enums {
+              A {
+                value   1
+              }
+              B {
+                value   2
+              }
+              C {
+                value   0
+              }
+            }
+          }
+        }
+      }
+      NotifyRw {
+        addr    0x0014
+        notify  rw
+        signals {
+          NoRwRwBit {
+            pos     31
+            mode    rw
+          }
+          NoRwRwSlice {
+            pos     30:24
+            mode    rw
+            reset   111
+          }
+          NoRwRoBit {
+            pos     23
+            mode    ro
+          }
+          NoRwRoSlice {
+            pos     22:16
+            mode    ro
+            reset   111
+          }
+          NoRwWoBit {
+            pos     15
+            mode    wo
+          }
+          NoRwWoSlice {
+            pos     14:8
+            mode    wo
+            reset   111
+          }
+          NoRwTrBit {
+            pos     7
+            mode    t
+          }
+          NoRwTrSlice {
+            pos     6:0
+            mode    t
+            reset   111
+          }
+        }
+      }
+      NotifyRo {
+        addr    0x0018
+        notify  ro
+        signals {
+          NoRoRwBit {
+            pos     31
+            mode    rw
+          }
+          NoRoRwSlice {
+            pos     30:24
+            mode    rw
+            reset   111
+          }
+          NoRoRoBit {
+            pos     23
+            mode    ro
+          }
+          NoRoRoSlice {
+            pos     22:16
+            mode    ro
+            reset   111
+          }
+          NoRoWoBit {
+            pos     15
+            mode    wo
+          }
+          NoRoWoSlice {
+            pos     14:8
+            mode    wo
+            reset   111
+          }
+          NoRoTrBit {
+            pos     7
+            mode    t
+          }
+          NoRoTrSlice {
+            pos     6:0
+            mode    t
+            reset   111
+          }
+        }
+      }
+      NotifyWo {
+        addr    0x001C
+        notify  wo
+        signals {
+          NoWoRwBit {
+            pos     31
+            mode    rw
+          }
+          NoWoRwSlice {
+            pos     30:24
+            mode    rw
+            reset   111
+          }
+          NoWoRoBit {
+            pos     23
+            mode    ro
+          }
+          NoWoRoSlice {
+            pos     22:16
+            mode    ro
+            reset   111
+          }
+          NoWoWoBit {
+            pos     15
+            mode    wo
+          }
+          NoWoWoSlice {
+            pos     14:8
+            mode    wo
+            reset   111
+          }
+          NoWoTrBit {
+            pos     7
+            mode    t
+          }
+          NoWoTrSlice {
+            pos     6:0
+            mode    t
+            reset   111
+          }
+        }
+      }
+      Const {
+        addr    0x0020
+        signals {
+          ConstBit0 {
+            pos     7
+            mode    c
+            reset   1
+          }
+          ConstBit1 {
+            pos     6
+            mode    c
+            reset   0
+          }
+          ConstSlice0 {
+            pos     31:24
+            mode    c
+            reset   113
+          }
+          ConstSlice1 {
+            pos     13:9
+            mode    c
+            reset   17
+          }
+        }
+      }
+    }
+  }
+}
