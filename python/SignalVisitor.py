@@ -9,7 +9,8 @@ from sxlParser import sxlParser
 from sxlVisitor import sxlVisitor
 
 class Signal(object):
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         self.position = None
         self.mode = None
         self.isInput = None
@@ -20,6 +21,7 @@ class Signal(object):
         check is a helper to facilitate this checking.
         If no reset is given, the assumption of reset = 0 is made.
         """
+        assert self.name is not None
         assert self.position is not None
         assert self.mode is not None
         assert self.isInput is not None
@@ -74,7 +76,7 @@ class SignalVisitor(sxlVisitor):
 
     def visitSignal(self, ctx: sxlParser.SignalContext):
         key = ctx.LABEL().getText()
-        self.sigs[key] = Signal()
+        self.sigs[key] = Signal(key)
         self._current_sig = self.sigs[key]
         self.visitChildren(ctx)
         self._current_sig.check()
@@ -95,10 +97,10 @@ class SignalVisitor(sxlVisitor):
 
     def visitSigmode(self, ctx: sxlParser.SigmodeContext):
         mode = ctx.key.text
-        if mode in ['rw', 'wo']:
-            isInput = False
-        else:
+        if mode in ['ro']:
             isInput = True
+        else:
+            isInput = False
         self._current_sig.mode = mode
         self._current_sig.isInput = isInput
 
