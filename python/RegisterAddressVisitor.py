@@ -1,5 +1,7 @@
-# author: rhallmen
-# date: 19.06.2017
+"""
+@author: rhallmen
+@date: 19.06.2017
+"""
 
 from antlr4 import *
 from sxlLexer import sxlLexer
@@ -60,10 +62,14 @@ class RegisterAddressVisitor(sxlVisitor):
         return self.visit(ctx.notify())
 
     def visitNotify(self, ctx: sxlParser.NotifyContext):
+        """ This function serves two jobs:
+        - set has_read_notify if this node is a read notification
+        - return 1, because it is a notify node
+        """
         token = ctx.key.text
         notify = token in ['rw', 'ro']
         self.has_read_notify = self.has_read_notify or notify
-        return int(notify)
+        return 1
 
 
     @classmethod
