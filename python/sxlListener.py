@@ -8,6 +8,24 @@ else:
 # This class defines a complete listener for a parse tree produced by sxlParser.
 class sxlListener(ParseTreeListener):
 
+    # Enter a parse tree produced by sxlParser#sxl_file.
+    def enterSxl_file(self, ctx:sxlParser.Sxl_fileContext):
+        pass
+
+    # Exit a parse tree produced by sxlParser#sxl_file.
+    def exitSxl_file(self, ctx:sxlParser.Sxl_fileContext):
+        pass
+
+
+    # Enter a parse tree produced by sxlParser#import_statement.
+    def enterImport_statement(self, ctx:sxlParser.Import_statementContext):
+        pass
+
+    # Exit a parse tree produced by sxlParser#import_statement.
+    def exitImport_statement(self, ctx:sxlParser.Import_statementContext):
+        pass
+
+
     # Enter a parse tree produced by sxlParser#blocks.
     def enterBlocks(self, ctx:sxlParser.BlocksContext):
         pass

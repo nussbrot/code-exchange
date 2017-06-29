@@ -5,6 +5,10 @@
  */
 
 grammar sxl;
+
+sxl_file : import_statement? blocks EOF;
+
+import_statement : 'import' '{' EXT_LABEL+ '}' ;
 blocks : 'blocks' '{' block+ '}' ;
 
 block : LABEL '{' block_item+ '}' ;
@@ -133,7 +137,7 @@ fragment POS
     ;
 
 LABEL : [a-zA-Z] [a-zA-Z0-9]* ;
-EXT_LABEL : (LABEL | [-_:.] )+ ;
+EXT_LABEL : (LABEL | [-/_:.] )+ ;
 
 STRING : '{' ~[{}\r\n]* '}' ;
 WS : [ \t\r\n]+ -> skip ;

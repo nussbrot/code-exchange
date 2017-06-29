@@ -9,6 +9,16 @@ else:
 
 class sxlVisitor(ParseTreeVisitor):
 
+    # Visit a parse tree produced by sxlParser#sxl_file.
+    def visitSxl_file(self, ctx:sxlParser.Sxl_fileContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by sxlParser#import_statement.
+    def visitImport_statement(self, ctx:sxlParser.Import_statementContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by sxlParser#blocks.
     def visitBlocks(self, ctx:sxlParser.BlocksContext):
         return self.visitChildren(ctx)
