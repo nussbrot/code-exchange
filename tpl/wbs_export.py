@@ -145,6 +145,10 @@ def _format_notifier_constant(has_notify):
 
 OUT_PRE = "o_"
 IN_PRE = "i_"
+PORT_DIC = {True:IN_PRE, False:OUT_PRE}
+def _port_name(sig: Signal):
+    return PORT_DIC[sig.isInput] + convert(sig.name)
+
 VECTOR = "STD_LOGIC_VECTOR"
 BIT = "STD_LOGIC"
 PORT_STRING = "{:25} : {:3} {};"
@@ -156,17 +160,15 @@ def _format_port_signal(signals):
     result = []
     for key, sig in signals.items():
         if sig.isInput:
-            _name = IN_PRE
             _dir = "IN"
         else:
-            _name = OUT_PRE
             _dir = "OUT"
-        _name += convert(key)
         if sig.position.isRange:
             _type = VECTOR + sig.position.decl()
         else:
             _type = BIT
 
+        _name = _port_name(sig)
         result.append(PORT_STRING.format(_name, _dir, _type))
 
     return result
@@ -211,9 +213,9 @@ T_PRE = "s_trg_"
 RW_PRE = "s_rw_"
 C_PRE = "s_const_"
 REG_PRE = "s_reg_"
-MODE_DIC = {'wo':WO_PRE, 't':T_PRE, 'rw':RW_PRE, 'c':C_PRE}
+SIGNAL_DIC = {'wo':WO_PRE, 't':T_PRE, 'rw':RW_PRE, 'c':C_PRE}
 def _sig_name(sig: Signal):
-    return MODE_DIC[sig.mode] + convert(sig.name)
+    return SIGNAL_DIC[sig.mode] + convert(sig.name)
 
 def _reg_name(reg):
     return REG_PRE + convert(reg)
@@ -237,40 +239,17 @@ def _format_register_decl(regs):
 
     return result
 
-def _format_signal_decl(sigs):
-    """
-    Write-only and Trigger signals also need a signal declaration
-    This function takes a dict of named signals.
-    """
-    result = []
-    string = 'SIGNAL {:30} : {} := {};'
-    for key, sig in sigs.items():
-        _type = VECTOR + str(sig.position)
-        _reset = "f_reset_cast({}, {})".format(sig.reset, len(sig.position))
-        if len(sig.position) == 1:
-            _type = BIT
-            _reset = single_quote(str(sig.reset))
-        if sig.mode not in ['wo', 't']:
-            continue
-
-        _name = _sig_name(sig)
-        result.append(string.format(_name, _type, _reset))
-
-
-    return result
-
 def _format_register_default(sigs, notifies):
     """
     Grab trigger signals from sigs and notifies from notifies.
+    Default values are set on port names
     """
     result = []
     string = '{:30} <= {};'
 
     # handle trigger signals
-    for key, sig in sigs.items():
-        if sig.mode not in ['t']:
-            continue
-        _name = T_PRE + convert(key)
+    for sig in iter_signals_with_mode(sigs.values(), ['t']):
+        _name = _port_name(sig)
         _value = "(OTHERS => '0')"
         if len(sig.position) == 1:
             _value = "'0'"
@@ -301,6 +280,8 @@ def _format_register_write(regs, validate, notifies):
     str_case = "WHEN {} =>"
     fun_dic = {"rw":"set_reg", "wo":"set_reg", "t":"set_trg"}
     str_reg = INDENT + "{}(s_int_data, s_int_we, {}, {});"
+    str_write_vec = INDENT + "set_write_port(s_int_data, s_int_we, {left}, {right}, {name});"
+    str_write_bit = INDENT + "set_write_port(s_int_data, s_int_we, {left}, {name});"
     str_not = INDENT + "set_notify({}, {});"
     not_dic = {"read":"s_int_trd", "write":"s_int_twr"}
     # looping over validated registers
@@ -316,21 +297,18 @@ def _format_register_write(regs, validate, notifies):
                 has_items = True
                 # for rw registers a single statement is added, after building the mask
                 mask |= _mask_from_pos(sig.position)
-            if sig.mode in ['t']:
+            if sig.mode in ['wo', 't']:
                 has_items = True
-                # triggers have their own statement, which we can add immediately
-                # However the statement differs for one bit signals
+                string_dic = {
+                    "left":sig.position.left,
+                    "right":sig.position.right,
+                    "name":_port_name(sig)}
+                # write only signals have their own statement and map directly to ports
                 if len(sig.position) == 1:
-                    sig_mask = sig.position.right
+                    string = str_write_bit
                 else:
-                    sig_mask = _format_mask(_mask_from_pos(sig.position))
-                result.append(str_reg.format(fun_dic[sig.mode], sig_mask, _sig_name(sig)))
-            if sig.mode in ['wo']:
-                has_items = True
-                sig_mask = _format_mask(_mask_from_pos(sig.position))
-                result.append(str_reg.format(fun_dic[sig.mode], sig_mask, _sig_name(sig)))
-                # write only signals have their own statement, so they cannot be read back.
-
+                    string = str_write_vec
+                result.append(string.format(**string_dic))
 
         # add rw if a mask is set
         if mask > 0:
@@ -343,9 +321,64 @@ def _format_register_write(regs, validate, notifies):
 
         # if we don't have items added, we remove the address
         if not has_items:
-            del result[-1]
+            result.pop()
     return result
 
+def iter_signals_with_mode(sigs, mode_list):
+    """
+    return an iterator over sigs where sig.mode is in mode_list
+    """
+    return filter(lambda sig: sig.mode in mode_list, sigs)
+
+def _format_read_only(regs):
+    """
+    Needed are read-only signals and their corresponding register names
+    """
+    string = "{:39} <= {};"
+    result = []
+    for reg_name, sigs in regs.items():
+        # just iterate over read-only signals
+        for sig in iter_signals_with_mode(sigs, ['ro']):
+            reg_slice = _reg_name(reg_name) + str(sig.position)
+            result.append(string.format(reg_slice, _port_name(sig)))
+
+    return result
+
+def _format_register_out(validate, regs):
+    """
+    - validate: a list with all validated register names
+    - regs: a dictionary with register name as key and a list of signals as values
+    """
+    string = "{reg:25} AND {mask} WHEN {addr},"
+    result = []
+    for reg in validate:
+        string_dic = {"reg":reg, "addr":_addr_name(reg)}
+        mask = 0
+        for sig in iter_signals_with_mode(regs[reg], ['ro', 'c', 'rw']):
+            mask |= _mask_from_pos(sig.position)
+
+        string_dic["mask"] = _format_mask(mask)
+        result.append(string.format(**string_dic))
+    return result
+
+def _format_output_mapping(regs):
+    """
+    All registers that can be read back, but are output ports need to be mapped
+    here. Currently these are signals with mode 'c' and 'rw'.
+    This will be obsolete once we decide to allow VHDL 2008, where ports with
+    mode out can be read back.
+    - regs: a dict with register name as key and a list of signals as value
+    """
+    string = "{port:25} <= {reg}{slice};"
+    result = []
+    for reg, sigs in regs.items():
+        string_dic = {"reg":_reg_name(reg)}
+        for sig in iter_signals_with_mode(sigs, ['rw', 'c']):
+            string_dic["port"] = _port_name(sig)
+            string_dic["slice"] = str(sig.position)
+            result.append(string.format(**string_dic))
+
+    return result
 
 def main(project, sxl_file, sxl_block, vhdl_file, tpl_file):
     """The main routine of this module"""
@@ -383,7 +416,6 @@ def main(project, sxl_file, sxl_block, vhdl_file, tpl_file):
 
     # look at register and signal declaration
     signals = _format_register_decl(v.regs)
-    signals.extend(_format_signal_decl(v.sigs))
     id_dic['TPL_REGISTERS%'] = _join_with_indent(signals, 1)
 
     # look at default values
@@ -394,9 +426,22 @@ def main(project, sxl_file, sxl_block, vhdl_file, tpl_file):
     writes = _format_register_write(v.regs, valids, v.notifies)
     id_dic['TPL_REG_WR%'] = _join_with_indent(writes, 4)
 
+    # look at wishbone read-only
+    reads = _format_read_only(v.regs)
+    id_dic['TPL_REG_RD%'] = _join_with_indent(reads, 3)
+
+    # look at wishbone read back
+    readout = _format_register_out(valids, v.regs)
+    id_dic['TPL_REG_DATA_OUT%'] = _join_with_indent(reads, 2)
+
+    # look at output port mapping
+    mapping = _format_output_mapping(v.regs)
+    id_dic['TPL_PORT_REG_OUT%'] = _join_with_indent(mapping, 1)
+
     # do the template substitution
     tpl = WbTemplate.from_file(tpl_file)
-    print(tpl.safe_substitute(id_dic))
+    with open(vhdl_file, 'w') as file:
+        file.write(tpl.substitute(id_dic))
 
 if __name__ == '__main__':
     PARSER = _setup_parser()
