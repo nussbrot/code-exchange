@@ -21,7 +21,7 @@ from sxlParser import sxlParser
 from sxlVisitor import sxlVisitor
 from BlockSizeVisitor import BlockSizeVisitor
 from RegisterAddressVisitor import RegisterAddressVisitor
-from SignalVisitor import SignalVisitor, Position
+from SignalVisitor import SignalVisitor, Position, Signal
 
 class WbTemplate(Template):
     """
@@ -107,10 +107,13 @@ def single_quote(string):
     return "'" + string + "'"
 
 ADDR_PRE = "c_addr_"
+def _addr_name(name):
+    return ADDR_PRE + convert(name)
+
 def _rename_addr_dict(dic):
     old_keys = list(dic.keys())
     for key in old_keys:
-        name = ADDR_PRE + convert(key)
+        name = _addr_name(key)
         dic[name] = dic.pop(key)
 
 INDENT = "  "
@@ -132,7 +135,7 @@ def _format_addr_validation(items):
     string = "'1' WHEN {},"
     result = []
     for key in items:
-        result.append(string.format(ADDR_PRE + convert(key)))
+        result.append(string.format(_addr_name(key)))
 
     return result
 
@@ -178,10 +181,10 @@ def iter_notify_port(notifies):
     for key, mode in notifies.items():
         if mode in ['ro', 'rw']:
             _name = OUT_PRE + convert(key) + READ_POST
-            yield _name
+            yield (_name, "read")
         if mode in ['wo', 'rw']:
             _name = OUT_PRE + convert(key) + WRITE_POST
-            yield _name
+            yield (_name, "read")
 
 def _format_port_notify(notifies):
     """
@@ -190,7 +193,7 @@ def _format_port_notify(notifies):
     Notifies are always outputs.
     """
     result = []
-    for _name in iter_notify_port(notifies):
+    for _name, _ in iter_notify_port(notifies):
         result.append(PORT_STRING.format(_name, "OUT", BIT))
 
     return result
@@ -209,6 +212,12 @@ RW_PRE = "s_rw_"
 C_PRE = "s_const_"
 REG_PRE = "s_reg_"
 MODE_DIC = {'wo':WO_PRE, 't':T_PRE, 'rw':RW_PRE, 'c':C_PRE}
+def _sig_name(sig: Signal):
+    return MODE_DIC[sig.mode] + convert(sig.name)
+
+def _reg_name(reg):
+    return REG_PRE + convert(reg)
+
 def _format_register_decl(regs):
     """
     This function expects an dict of a list. With the keys being
@@ -220,7 +229,7 @@ def _format_register_decl(regs):
     string = 'SIGNAL {:30} : {} := x"{:08x}";'
     for key, sigs in regs.items():
         _reset = 0
-        _name = REG_PRE + convert(key)
+        _name = _reg_name(key)
         for sig in sigs:
             _reset = _reset_bit_twiddling(sig.reset, sig.position, _reset)
 
@@ -244,7 +253,7 @@ def _format_signal_decl(sigs):
         if sig.mode not in ['wo', 't']:
             continue
 
-        _name = MODE_DIC[sig.mode] + convert(key)
+        _name = _sig_name(sig)
         result.append(string.format(_name, _type, _reset))
 
 
@@ -269,10 +278,74 @@ def _format_register_default(sigs, notifies):
 
     # handle notifies
     _value = "'0'"
-    for _name in iter_notify_port(notifies):
+    for _name, _ in iter_notify_port(notifies):
         result.append(string.format(_name, _value))
 
     return result
+
+def _mask_from_pos(pos: Position):
+    return (2**len(pos)-1) << pos.right
+
+def _format_mask(mask):
+    return 'x"{:08x}"'.format(mask)
+
+def _format_register_write(regs, validate, notifies):
+    """
+    All writes must be gathered and written to a result list.
+    However this is unfortunately complicated.
+    - notifies: a dict with reg name as key and the notify type as value.
+    - validate: a list with validated register names. Only those may be added.
+    - regs: a dict with reg names as keys and corresponding signals as items.
+    """
+    result = []
+    str_case = "WHEN {} =>"
+    fun_dic = {"rw":"set_reg", "wo":"set_reg", "t":"set_trg"}
+    str_reg = INDENT + "{}(s_int_data, s_int_we, {}, {});"
+    str_not = INDENT + "set_notify({}, {});"
+    not_dic = {"read":"s_int_trd", "write":"s_int_twr"}
+    # looping over validated registers
+    for reg_name in validate:
+        # First add the address. If we don't need it we will remove it later.
+        result.append(str_case.format(_addr_name(reg_name)))
+        # Each name in validate is also in regs, but not necessarily in notifies
+        sigs = regs[reg_name]
+        mask = 0
+        has_items = False
+        for sig in sigs:
+            if sig.mode in ['rw']:
+                has_items = True
+                # for rw registers a single statement is added, after building the mask
+                mask |= _mask_from_pos(sig.position)
+            if sig.mode in ['t']:
+                has_items = True
+                # triggers have their own statement, which we can add immediately
+                # However the statement differs for one bit signals
+                if len(sig.position) == 1:
+                    sig_mask = sig.position.right
+                else:
+                    sig_mask = _format_mask(_mask_from_pos(sig.position))
+                result.append(str_reg.format(fun_dic[sig.mode], sig_mask, _sig_name(sig)))
+            if sig.mode in ['wo']:
+                has_items = True
+                sig_mask = _format_mask(_mask_from_pos(sig.position))
+                result.append(str_reg.format(fun_dic[sig.mode], sig_mask, _sig_name(sig)))
+                # write only signals have their own statement, so they cannot be read back.
+
+
+        # add rw if a mask is set
+        if mask > 0:
+            result.append(str_reg.format(fun_dic['rw'], _format_mask(mask), _reg_name(reg_name)))
+        # check if register has notifier
+        if reg_name in notifies:
+            has_items = True
+            for name, mode in iter_notify_port({reg_name:notifies[reg_name]}):
+                result.append(str_not.format(not_dic[mode], name))
+
+        # if we don't have items added, we remove the address
+        if not has_items:
+            del result[-1]
+    return result
+
 
 def main(project, sxl_file, sxl_block, vhdl_file, tpl_file):
     """The main routine of this module"""
@@ -290,14 +363,15 @@ def main(project, sxl_file, sxl_block, vhdl_file, tpl_file):
     # get the register addresses
     v = RegisterAddressVisitor()
     v.visit(tree)
-    dic = v.addr
-    _rename_addr_dict(dic)
-    const = _format_reg_addr(dic)
+    addr_dic = v.addr
+    _rename_addr_dict(addr_dic)
+    const = _format_reg_addr(addr_dic)
     const.extend(_format_notifier_constant(v.has_read_notify))
     id_dic['TPL_CONSTANTS%'] = _join_with_indent(const, 1)
 
     # re-use the above visitor to also handle address validation
-    validate = _format_addr_validation(v.validate)
+    valids = v.validate
+    validate = _format_addr_validation(valids)
     id_dic['TPL_ADDR_VALIDATION%'] = _join_with_indent(validate, 2)
 
     # look at port declaration
@@ -315,6 +389,10 @@ def main(project, sxl_file, sxl_block, vhdl_file, tpl_file):
     # look at default values
     defaults = _format_register_default(v.sigs, v.notifies)
     id_dic['TPL_REG_DEFAULT%'] = _join_with_indent(defaults, 3)
+
+    # look at wishbone write
+    writes = _format_register_write(v.regs, valids, v.notifies)
+    id_dic['TPL_REG_WR%'] = _join_with_indent(writes, 4)
 
     # do the template substitution
     tpl = WbTemplate.from_file(tpl_file)
