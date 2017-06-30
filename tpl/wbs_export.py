@@ -352,13 +352,15 @@ def _format_register_out(validate, regs):
     string = "{reg:25} AND {mask} WHEN {addr},"
     result = []
     for reg in validate:
-        string_dic = {"reg":reg, "addr":_addr_name(reg)}
+        string_dic = {"reg":_reg_name(reg), "addr":_addr_name(reg)}
         mask = 0
         for sig in iter_signals_with_mode(regs[reg], ['ro', 'c', 'rw']):
             mask |= _mask_from_pos(sig.position)
 
-        string_dic["mask"] = _format_mask(mask)
-        result.append(string.format(**string_dic))
+        # add only if there are signals to read back
+        if mask > 0:
+            string_dic["mask"] = _format_mask(mask)
+            result.append(string.format(**string_dic))
     return result
 
 def _format_output_mapping(regs):
@@ -432,7 +434,7 @@ def main(project, sxl_file, sxl_block, vhdl_file, tpl_file):
 
     # look at wishbone read back
     readout = _format_register_out(valids, v.regs)
-    id_dic['TPL_REG_DATA_OUT%'] = _join_with_indent(reads, 2)
+    id_dic['TPL_REG_DATA_OUT%'] = _join_with_indent(readout, 2)
 
     # look at output port mapping
     mapping = _format_output_mapping(v.regs)
